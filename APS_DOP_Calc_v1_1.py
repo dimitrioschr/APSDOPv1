@@ -18,12 +18,13 @@ class Voyage(object):
 
     def perform_leg(self, ship, leg):
         days_taken = leg.distance / (ship.speed * 24)
+        bunkers_consumed = days_taken * ship.sea_consumption
         self.voyage_days += days_taken
-        ship.rob -= days_taken * ship.sea_consumption
+        ship.rob -= bunkers_consumed
         if leg.on_hire:
             self.income += days_taken * self.aps_rate
         else:
-            self.income -= days_taken * ship.sea_consumption * ship.bunker_price
+            self.income -= bunkers_consumed * ship.bunker_price
         self.dop_rate = self.income / self.voyage_days
         return self
 
@@ -34,13 +35,19 @@ class Voyage(object):
 
     def perform_port(self, ship, port):
         self.voyage_days += port.days
-        ship.rob -= port.days * ship.port_consumption
+        bunkers_consumed = port.days * ship.port_consumption
+        ship.rob -= bunkers_consumed
         if port.on_hire:
             self.income += port.days * self.aps_rate
+        else:
+            self.income -= bunkers_consumed * ship.bunker_price
         self.dop_rate = self.income / self.voyage_days
         return self
 
     def perform_bunkering(self, ship, bunkering):
+        bunkers_consumed = bunkering.days * ship.port_consumption
+        bunkers_consumed_cost = bunkers_consumed * ship.bunker_price
+        ship.rob -= bunkers_consumed
         ship.bunker_price = (
             (ship.rob * ship.bunker_price + bunkering.quantity * bunkering.price) /
             (ship.rob + bunkering.quantity)
@@ -49,6 +56,8 @@ class Voyage(object):
         self.voyage_days += bunkering.days
         if bunkering.on_hire:
             self.income += bunkering.days * self.aps_rate
+        else:
+            self.income -= bunkers_consumed_cost
         self.dop_rate = self.income / self.voyage_days
         return self
 
